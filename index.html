@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block contenido %}
+<section class="panel">
+  <h2>Preguntale a BrotIA sobre tu huerta</h2>
+  <div id="chat" aria-live="polite"></div>
+  <form class="fila" id="form">
+    <input type="text" id="mensaje" placeholder="Ej.: ¿Qué puedo sembrar ahora?" maxlength="2000" required>
+    <button type="submit" id="enviar">Enviar</button>
+  </form>
+  <p><small>Las fechas del calendario son nacionales (ProHuerta) y deben ajustarse al clima de Formosa y Chaco.
+  La luna y el viento se presentan como saberes tradicionales, no como reglas garantizadas.</small></p>
+</section>
+<script>
+const chat = document.getElementById('chat'), form = document.getElementById('form'),
+      campo = document.getElementById('mensaje'), boton = document.getElementById('enviar');
+let historial = [];
+function agregar(texto, clase){ const d = document.createElement('div'); d.className = 'msg ' + clase;
+  d.textContent = texto; chat.appendChild(d); chat.scrollTop = chat.scrollHeight; }
+agregar('¡Hola! Soy BrotIA. Contame qué querés saber de tu huerta.', 'bot');
+form.addEventListener('submit', async e => {
+  e.preventDefault(); const m = campo.value.trim(); if(!m) return;
+  agregar(m, 'yo'); campo.value = ''; boton.disabled = true;
+  try {
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({mensaje:m, historial:historial})});
+    const j = await r.json();
+    const t = j.respuesta || j.error || 'Hubo un problema.';
+    agregar(t, 'bot');
+    if(j.respuesta){ historial.push({role:'user',content:m},{role:'assistant',content:t}); }
+  } catch(err){ agregar('No pude conectarme. Probá de nuevo.', 'bot'); }
+  boton.disabled = false; campo.focus();
+});
+</script>
+{% endblock %}

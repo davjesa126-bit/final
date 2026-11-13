@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}{{ config.entidad }}{% endblock %}</title>
+<link rel="icon" href="{{ url_for('static', filename='logo.png') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+</head>
+<body>
+<header>
+  <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo de {{ config.entidad }}">
+  <div>
+    <h1><span class="brot">Brot</span><span class="ia">IA</span></h1>
+    <p>{{ config.lema }}</p>
+  </div>
+  <nav><a href="/">Consultas</a><a href="/capacitacion">Capacitación</a></nav>
+</header>
+<main>{% block contenido %}{% endblock %}</main>
+</body>
+</html>

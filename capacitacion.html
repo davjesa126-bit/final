@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block titulo %}Capacitación · {{ config.entidad }}{% endblock %}
+{% block contenido %}
+<section class="panel">
+  <h2>{{ config.curso }}</h2>
+  {% for clase in clases %}
+  <h3>{{ clase.titulo }}</h3>
+  <ul>{% for t in clase.temas %}<li>{{ t }}</li>{% endfor %}</ul>
+  {% endfor %}
+</section>
+
+<section class="panel" id="eval">
+  <h2>Autoevaluación</h2>
+  <form id="quiz">
+  {% for p in preguntas %}
+    {% set i = loop.index0 %}
+    <fieldset><legend>{{ loop.index }}. {{ p.texto }}</legend>
+      {% for o in p.opciones %}
+      <label class="op"><input type="radio" name="p{{ i }}" value="{{ loop.index0 }}" required> {{ o }}</label>
+      {% endfor %}
+    </fieldset>
+  {% endfor %}
+    <button type="submit">Enviar respuestas</button>
+  </form>
+  <p id="resultado"></p>
+</section>
+
+<section class="panel oculto" id="datos">
+  <h2>Tu certificado</h2>
+  <div class="aviso">{{ aviso }}</div>
+  <p><button type="button" id="si">Acepto dar mis datos</button>
+     <button type="button" class="sec" id="no">No, gracias</button></p>
+  <p id="rechazo" class="oculto">Entendido, no te pedimos ningún dato y no se emite certificado. Podés volver cuando quieras.</p>
+  <form id="formdatos" class="oculto">
+    <p><input type="text" id="nombre" placeholder="Nombre y apellido completos" required maxlength="80" autocomplete="name"></p>
+    <p><input type="text" id="dni" placeholder="DNI (solo números)" required maxlength="12" inputmode="numeric"></p>
+    <button type="submit">Descargar certificado (PDF)</button>
+  </form>
+  <p id="msgdatos"></p>
+</section>
+
+<script>
+const quiz = document.getElementById('quiz'), res = document.getElementById('resultado'),
+      datos = document.getElementById('datos'), n = {{ preguntas|length }};
+let respuestas = null;
+quiz.addEventListener('submit', async e => {
+  e.preventDefault();
+  respuestas = Array.from({length:n}, (_, i) => parseInt(quiz.querySelector(`input[name=p${i}]:checked`).value, 10));
+  const r = await fetch('/api/evaluar', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({respuestas})});
+  const j = await r.json();
+  if(!r.ok){ res.className='error'; res.textContent = j.error; return; }
+  if(j.aprobado){ res.className='ok'; res.textContent = `Aprobaste con ${j.puntaje}%.`; datos.classList.remove('oculto'); datos.scrollIntoView({behavior:'smooth'}); }
+  else { res.className='error'; res.textContent = `Sacaste ${j.puntaje}%. Necesitás ${j.nota_minima}%. Podés intentarlo de nuevo.`; datos.classList.add('oculto'); }
+});
+document.getElementById('si').onclick = () => { document.getElementById('formdatos').classList.remove('oculto'); document.getElementById('rechazo').classList.add('oculto'); };
+document.getElementById('no').onclick = () => { document.getElementById('formdatos').classList.add('oculto'); document.getElementById('rechazo').classList.remove('oculto'); };
+document.getElementById('formdatos').addEventListener('submit', async e => {
+  e.preventDefault();
+  const msg = document.getElementById('msgdatos'); msg.className=''; msg.textContent = 'Generando…';
+  const r = await fetch('/api/certificado', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({respuestas, acepto:true, nombre:document.getElementById('nombre').value, dni:document.getElementById('dni').value})});
+  if(!r.ok){ const j = await r.json(); msg.className='error'; msg.textContent = j.error || 'Error.'; return; }
+  const blob = await r.blob(); const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'certificado-brotia.pdf'; a.click(); URL.revokeObjectURL(a.href);
+  document.getElementById('nombre').value = ''; document.getElementById('dni').value = '';
+  msg.className='ok'; msg.textContent = '¡Listo! Tu certificado se descargó. No guardamos tus datos.';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+reportlab>=4.0
+flask>=3.0
+# Opcional: solo para la conversación con IA (brotia/agente.py)
+anthropic>=0.40
